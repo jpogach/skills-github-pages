@@ -10,8 +10,8 @@
                 .then(response => response.text())
                 .then(data => {
                     const recommendations = data.split('\n').slice(1).map(row => {
-                        const [service, recommender, email, vendor, webpage, date, liked] = row.split(',');
-                        return { service, recommender, email, vendor, webpage, date, liked };
+                        const [service, recommender, , vendor, webpage, date, liked] = row.split(',');
+                        return { service, recommender, vendor, webpage, date, liked };
                     });
 
                     function populateDropdown() {
@@ -104,6 +104,31 @@
 
                         // Repopulate the dropdowns to include the new service if it's unique
                         populateDropdown();
+
+                        // Add the new recommendation to the CSV file
+                        const newRow = `${service},${recommender},,${vendorName},${vendorWebsite},,${comments}\n`;
+                        fetch('https://api.github.com/repos/jpogach/skills-github-pages/contents/OKCrecs.csv', {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': 'token YOUR_GITHUB_TOKEN'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(file => {
+                            const updatedContent = atob(file.content) + newRow;
+                            fetch('https://api.github.com/repos/jpogach/skills-github-pages/contents/OKCrecs.csv', {
+                                method: 'PUT',
+                                headers: {
+                                    'Authorization': 'token YOUR_GITHUB_TOKEN',
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    message: 'Add new recommendation',
+                                    content: btoa(updatedContent),
+                                    sha: file.sha
+                                })
+                            });
+                        });
                     }
 
                     populateDropdown();
