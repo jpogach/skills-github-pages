@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommendations</title>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch('https://raw.githubusercontent.com/jpogach/skills-github-pages/main/OKCrecs.csv')
+                .then(response => response.text())
+                .then(data => {
+                    const recommendations = data.split('\n').slice(1).map(row => {
+                        const [service, recommender, email, vendor, webpage, date, liked] = row.split(',');
+                        return { service, recommender, email, vendor, webpage, date, liked };
+                    });
+
+                    function populateDropdown() {
+                        const dropdowns = document.querySelectorAll(".recommendations-dropdown");
+                        dropdowns.forEach(dropdown => {
+                            const uniqueServices = [...new Set(recommendations.map(row => row.service.toLowerCase()))];
+                            dropdown.innerHTML = '<option value="">Select</option>';
+                            uniqueServices.forEach(service => {
+                                const option = document.createElement("option");
+                                option.value = service;
+                                option.text = service.charAt(0).toUpperCase() + service.slice(1);
+                                dropdown.add(option);
+                            });
+                            const newServiceOption = document.createElement("option");
+                            newServiceOption.value = "new-service";
+                            newServiceOption.text = "New Service";
+                            dropdown.add(newServiceOption);
+                        });
+                    }
+
+                    function showRecommendation() {
+                        const selectedOption = document.getElementById("recommendations").value;
+                        const filteredRecommendations = recommendations.filter(row => row.service.toLowerCase() === selectedOption);
+
+                        if (filteredRecommendations.length > 0) {
+                            const vendors = filteredRecommendations.reduce((acc, recommendation) => {
+                                if (!acc[recommendation.vendor]) {
+                                    acc[recommendation.vendor] = {
+                                        webpage: recommendation.webpage,
+                                        recommenders: []
+                                    };
+                                }
+                                acc[recommendation.vendor].recommenders.push(recommendation.recommender);
+                                return acc;
+                            }, {});
+
+                            const vendorList = Object.keys(vendors).map(vendor => `
+                                <p><strong>Vendor:</strong> ${vendors[vendor].webpage ? `<a href="${vendors[vendor].webpage}" target="_blank">${vendor}</a>` : vendor}</p>
+                                <p><strong>Number of Recommenders:</strong> ${vendors[vendor].recommenders.length}</p>
+                                <p><strong>Recommenders:</strong> ${vendors[vendor].recommenders.join(', ')}</p>
+                            `).join('');
+
+                            document.getElementById("result").innerHTML = vendorList;
+                        } else {
+                            document.getElementById("result").innerHTML = `<p>No recommendation found.</p>`;
+                        }
+                    }
+
+                    function showRecommendationForm() {
+                        const selectedOption = document.getElementById("recommendations-recommend").value;
+                        if (selectedOption === "new-service") {
+                            document.getElementById("new-service-input").style.display = "block";
+                        } else {
+                            document.getElementById("new-service-input").style.display = "none";
+                        }
+                        if (selectedOption) {
+                            document.getElementById("recommendation-form").style.display = "block";
+                        } else {
+                            document.getElementById("recommendation-form").style.display = "none";
+                        }
+                    }
+
+                    function sendEmail() {
+                        const serviceDropdown = document.getElementById("recommendations-recommend");
+                        const service = serviceDropdown.value === "new-service" ? document.getElementById("new-service").value : serviceDropdown.value;
+                        const recommender = document.getElementById("recommender").value;
+                        const vendorName = document.getElementById("vendor-name").value;
+                        const vendorWebsite = document.getElementById("vendor-website").value;
+                        const comments = document.getElementById("comments").value;
+
+                        const emailBody = `
+                            Service: ${service}\n
+                            Recommender: ${recommender}\n
+                            Vendor Name: ${vendorName}\n
+                            Vendor Website: ${vendorWebsite}\n
+                            Comments: ${comments}
+                        `;
+
+                        window.location.href = `mailto:pogachjonathan@gmail.com?subject=New Recommendation&body=${encodeURIComponent(emailBody)}`;
+
+                        // Add the new recommendation to the recommendations table
+                        recommendations.push({
+                            service: service.charAt(0).toUpperCase() + service.slice(1),
+                            recommender: recommender,
+                            vendor: vendorName,
+                            webpage: vendorWebsite,
+                            date: "",
+                            liked: comments
+                        });
+
+                        // Repopulate the dropdowns to include the new service if it's unique
+                        populateDropdown();
+                    }
+
+                    populateDropdown();
+                    document.getElementById("submit").addEventListener("click", showRecommendation);
+                    document.getElementById("recommendations-recommend").addEventListener("change", showRecommendationForm);
+                    document.getElementById("submit-recommendation").addEventListener("click", sendEmail);
+                });
+        });
+    </script>
+</head>
+<body>
+    <h1>I am looking for....</h1>
+    <form>
+        <label for="recommendations">Services:</label>
+        <select id="recommendations" name="recommendations" class="recommendations-dropdown">
+            <option value="">Select</option>
+        </select>
+        <button type="button" id="submit">Submit</button>
+    </form>
+    <div id="result"></div>
+
+    <h1>I can recommend...</h1>
+    <form>
+        <label for="recommendations-recommend">Services:</label>
+        <select id="recommendations-recommend" name="recommendations-recommend" class="recommendations-dropdown">
+            <option value="">Select</option>
+        </select>
+        <div id="new-service-input" style="display: none;">
+            <label for="new-service">New Service:</label>
+            <input type="text" id="new-service" name="new-service"><br>
+        </div>
+    </form>
+    <div id="recommendation-form" style="display: none;">
+        <form>
+            <label for="recommender">Recommender:</label>
+            <input type="text" id="recommender" name="recommender"><br>
+            <label for="vendor-name">Vendor Name:</label>
+            <input type="text" id="vendor-name" name="vendor-name"><br>
+            <label for="vendor-website">Vendor Website:</label>
+            <input type="text" id="vendor-website" name="vendor-website"><br>
+            <label for="comments">Comments:</label>
+            <textarea id="comments" name="comments"></textarea><br>
+            <button type="button" id="submit-recommendation">Submit Recommendation</button>
+        </form>
+    </div>
+</body>
+</html>
