@@ -10,8 +10,8 @@
                 .then(response => response.text())
                 .then(data => {
                     const recommendations = data.split('\n').slice(1).map(row => {
-                        const [service, recommender, email, vendor, webpage, date, liked] = row.split(',');
-                        return { service, recommender, email, vendor, webpage, date, liked };
+                        const [service, recommender, , vendor, webpage, date, liked] = row.split(',');
+                        return { service, recommender, vendor, webpage, date, liked };
                     });
 
                     function populateDropdown() {
@@ -74,23 +74,13 @@
                         }
                     }
 
-                    function sendEmail() {
+                    function addRecommendation() {
                         const serviceDropdown = document.getElementById("recommendations-recommend");
                         const service = serviceDropdown.value === "new-service" ? document.getElementById("new-service").value : serviceDropdown.value;
                         const recommender = document.getElementById("recommender").value;
                         const vendorName = document.getElementById("vendor-name").value;
                         const vendorWebsite = document.getElementById("vendor-website").value;
                         const comments = document.getElementById("comments").value;
-
-                        const emailBody = `
-                            Service: ${service}\n
-                            Recommender: ${recommender}\n
-                            Vendor Name: ${vendorName}\n
-                            Vendor Website: ${vendorWebsite}\n
-                            Comments: ${comments}
-                        `;
-
-                        window.location.href = `mailto:pogachjonathan@gmail.com?subject=New Recommendation&body=${encodeURIComponent(emailBody)}`;
 
                         // Add the new recommendation to the recommendations table
                         recommendations.push({
@@ -104,12 +94,37 @@
 
                         // Repopulate the dropdowns to include the new service if it's unique
                         populateDropdown();
+
+                        // Add the new recommendation to the CSV file
+                        const newRow = `${service},${recommender},,${vendorName},${vendorWebsite},,${comments}\n`;
+                        fetch('https://api.github.com/repos/jpogach/skills-github-pages/contents/OKCrecs.csv', {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': 'token YOUR_GITHUB_TOKEN'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(file => {
+                            const updatedContent = atob(file.content) + newRow;
+                            fetch('https://api.github.com/repos/jpogach/skills-github-pages/contents/OKCrecs.csv', {
+                                method: 'PUT',
+                                headers: {
+                                    'Authorization': 'token YOUR_GITHUB_TOKEN',
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    message: 'Add new recommendation',
+                                    content: btoa(updatedContent),
+                                    sha: file.sha
+                                })
+                            });
+                        });
                     }
 
                     populateDropdown();
                     document.getElementById("submit").addEventListener("click", showRecommendation);
                     document.getElementById("recommendations-recommend").addEventListener("change", showRecommendationForm);
-                    document.getElementById("submit-recommendation").addEventListener("click", sendEmail);
+                    document.getElementById("submit-recommendation").addEventListener("click", addRecommendation);
                 });
         });
     </script>
