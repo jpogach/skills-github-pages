@@ -17,7 +17,7 @@
                     function populateDropdown() {
                         const dropdowns = document.querySelectorAll(".recommendations-dropdown");
                         dropdowns.forEach(dropdown => {
-                            const uniqueServices = [...new Set(recommendations.map(row => row.service.toLowerCase()))];
+                            const uniqueServices = [...new Set(recommendations.map(row => row.service.toLowerCase()))].sort();
                             dropdown.innerHTML = '<option value="">Select</option>';
                             uniqueServices.forEach(service => {
                                 const option = document.createElement("option");
@@ -165,3 +165,4 @@
     </div>
 </body>
 </html>
+
